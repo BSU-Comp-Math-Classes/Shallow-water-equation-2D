@@ -25,7 +25,7 @@ To solve the system numerically, we employ a ﬁnite volume scheme, where we div
 <img width="832" alt="image" src="https://github.com/user-attachments/assets/b330a24a-294b-45f7-a33f-6380e2429045" />
 In each direction, we have a total of $N_x$ elements plus two ghost elements to hold boundary condition values. On the horizontal boundaries (left and right), we prescribe the reﬂecting boundary condition as follows:
 
-$$h_{i,0} = h_{i,1},$$
+$$h_{i,0} = h_{i,1},$$\
 $$h_{i,0} = h_{i,1}, (uh)_{i,0} = -(uh)_{i,1}, (vh)_{i,0} = (vh)_{i,1}$$
 
 $$h_{i,N_x+1} = h_{i,N_x},\qquad (uh)_{i,N_x+1} = -(uh)_{i,N_x},\qquad (vh)_{i,N_x+1} = (vh)_{i,N_x},$$

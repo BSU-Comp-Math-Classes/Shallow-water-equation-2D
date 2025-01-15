@@ -23,5 +23,24 @@ We want to solve 2D shallow water equations in a rectangular domain of size $L_x
 ## Numerical discretization with finite volume scheme
 To solve the system numerically, we employ a ﬁnite volume scheme, where we divide the square domain into a grid of $N_x \times N_y$ elements (again, for simplicity, we assume $N_x = N_y$) and locate variables $uh$, $vh$ at the center of each element. The diagram below explains the indexing of elements and the creation of ghost elements to prescribe boundary conditions.
 <img width="832" alt="image" src="https://github.com/user-attachments/assets/b330a24a-294b-45f7-a33f-6380e2429045" />
+In each direction, we have a total of $N_x$ elements plus two ghost elements to hold boundary condition values. On the horizontal boundaries (left and right), we prescribe the reﬂecting boundary condition as follows:
+
+$$h_{i,0} = h_{i,1},\qquad (uh)_{i,0} = -(uh)_{i,1},\qquad (vh)_{i,0} = (vh)_{i,1},$$
+$$h_{i,N_x+1} = h_{i,N_x},\qquad (uh)_{i,N_x+1} = -(uh)_{i,N_x},\qquad (vh)_{i,N_x+1} = (vh)_{i,N_x},$$
+
+The vertical boundary conditions are:
+$$h_{0,j} = h_{1,j},\qquad (uh)_{0,j} = (uh)_{1,j},\qquad (vh)_{0,j} = -(vh)_{1,j},$$
+$$h_{N_x+1,j} = h_{N_x,j},\qquad (uh)_{N_x+1,j} = (uh)_{N_x,j},\qquad (vh)_{N_x+1,j} = -(vh)_{N_x,j}.$$
+
+This way, the momentum is always reﬂected back into the domain, and the wave “bounces oﬀ” the walls of our “square bathtub” domain.
+
+## Lax-Friedrichs time-stepping method
+To discretize our equations we use the Lax-Friedrichs scheme, which can be expressed as follows:
+
+$$h_{i,j}^{n+1} = \frac14 \left( h_{i+1,j}^{n} + h_{i-1,j}^{n} + h_{i,j+1}^{n} + h_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{h,\ i,j+1}^{n} - F_{h,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{h,\ i+1,j}^{n} - G_{h,\ i-1,j}^{n} \right) $$
+$$(uh)_{i,j}^{n+1} = \frac14 \left( (uh)_{i+1,j}^{n} + (uh)_{i-1,j}^{n} + (uh)_{i,j+1}^{n} + (uh)_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{uh,\ i,j+1}^{n} - F_{uh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{uh,\ i+1,j}^{n} - G_{uh,\ i-1,j}^{n} \right) $$
+$$(vh)_{i,j}^{n+1} = \frac14 \left( (vh)_{i+1,j}^{n} + (vh)_{i-1,j}^{n} + (vh)_{i,j+1}^{n} + (vh)_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{vh,\ i,j+1}^{n} - F_{vh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{vh,\ i+1,j}^{n} - G_{vh,\ i-1,j}^{n} \right) $$
+
+The $^n$ superscript indicates the current value of the variable (at time $t_n$), and $^{n+1}$ indicates the next time-level value we are trying to predict. 
 
 

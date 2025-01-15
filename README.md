@@ -9,3 +9,4 @@ $$\frac{\partial (uh)}{\partial t} + \frac{\partial F_{uh}}{\partial x} + \frac{
 $$\frac{\partial (vh)}{\partial t} + \frac{\partial F_{vh}}{\partial x} + \frac{\partial G_{vh}}{\partial y} = 0$$
 
 where *h* is the water height, *u* is the velocity in the x direction, *v* is the velocity in the y direction. Variables *uh* and *vh* correspond to momentum in the x and y directions and are used as prognostic variables instead of *u* and *v*, which are computed from *h*, *uh*, and *vh*. *F* and *G* are the ﬂuxes deﬁned as:
+$F_{h} = uh$, $G_h = vh$ 

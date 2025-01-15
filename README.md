@@ -1,8 +1,8 @@
 # Shallow-water-equation-2D
-This code solves shallow water equations (SWE) in a rectangular domain. Below is a more thorough description of the math behind the problem, and how to run the code.
+This code solves shallow water equations (SWE) in a rectangular domain. Below is a more thorough description of the math behind the problem and how to run the code.
 
 ## Shallow water equations
-Shallow water equation is a system of partial diﬀerential equations which approximates the propagation of ocean waves, river and estuary ﬂows, etc., where the assumption of a relative “shallowness” of water, i.e. ratio of the depth to horizontal directions being small, holds. The system of equations takes the following form:
+The shallow water equation is a system of partial diﬀerential equations that approximates the propagation of ocean waves, river and estuary ﬂows, etc., where the assumption of a relative “shallowness” of water, i.e., the ratio of the depth to horizontal directions being small, holds. The system of equations takes the following form:
 
 $$\frac{\partial h}{\partial t} + \frac{\partial F_h}{\partial x} + \frac{\partial G_h}{\partial y} = 0$$
 $$\frac{\partial (uh)}{\partial t} + \frac{\partial F_{uh}}{\partial x} + \frac{\partial G_{uh}}{\partial y} = 0$$
@@ -35,11 +35,11 @@ $$h_{N_x+1,j} = h_{N_x,j},\qquad uh_{N_x+1,j} = uh_{N_x,j},\qquad vh_{N_x+1,j} =
 This way, the momentum is always reﬂected back into the domain, and the wave “bounces oﬀ” the walls of our “square bathtub” domain.
 
 ## Lax-Friedrichs time-stepping method
-To discretize our equations we use the Lax-Friedrichs scheme, which can be expressed as follows:
+To discretize our equations, we use the Lax-Friedrichs scheme, which can be expressed as follows:
 
-$$h_{i,j}^{n+1} = \frac14 \left( h_{i+1,j}^{n} + h_{i-1,j}^{n} + h_{i,j+1}^{n} + h_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{h,\ i,j+1}^{n} - F_{h,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{h,\ i+1,j}^{n} - G_{h,\ i-1,j}^{n} \right) $$
-$$(uh)_{i,j}^{n+1} = \frac14 \left( (uh)_{i+1,j}^{n} + (uh)_{i-1,j}^{n} + (uh)_{i,j+1}^{n} + (uh)_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{uh,\ i,j+1}^{n} - F_{uh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{uh,\ i+1,j}^{n} - G_{uh,\ i-1,j}^{n} \right) $$
-$$(vh)_{i,j}^{n+1} = \frac14 \left( (vh)_{i+1,j}^{n} + (vh)_{i-1,j}^{n} + (vh)_{i,j+1}^{n} + (vh)_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{vh,\ i,j+1}^{n} - F_{vh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{vh,\ i+1,j}^{n} - G_{vh,\ i-1,j}^{n} \right) $$
+$$h_{i,j}^{n+1} = \frac14 \left( h_{i+1,j}^{n} + h_{i-1,j}^{n} + h_{i,j+1}^{n} + h_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{h,\ i,j+1}^{n} - F_{h,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{h,\ i+1,j}^{n} - G_{h,\ i-1,j}^{n} \right) $$\
+$$uh_{i,j}^{n+1} = \frac14 \left( uh_{i+1,j}^{n} + uh_{i-1,j}^{n} + uh_{i,j+1}^{n} + uh_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{uh,\ i,j+1}^{n} - F_{uh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{uh,\ i+1,j}^{n} - G_{uh,\ i-1,j}^{n} \right) $$\
+$$vh_{i,j}^{n+1} = \frac14 \left( vh_{i+1,j}^{n} + vh_{i-1,j}^{n} + vh_{i,j+1}^{n} + vh_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{vh,\ i,j+1}^{n} - F_{vh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{vh,\ i+1,j}^{n} - G_{vh,\ i-1,j}^{n} \right) $$
 
 The $^n$ superscript indicates the current value of the variable (at time $t_n$), and $^{n+1}$ indicates the next time-level value we are trying to predict. 
 

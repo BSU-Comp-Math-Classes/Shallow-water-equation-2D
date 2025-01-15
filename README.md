@@ -25,14 +25,12 @@ To solve the system numerically, we employ a ﬁnite volume scheme, where we div
 <img width="832" alt="image" src="https://github.com/user-attachments/assets/b330a24a-294b-45f7-a33f-6380e2429045" />
 In each direction, we have a total of $N_x$ elements plus two ghost elements to hold boundary condition values. On the horizontal boundaries (left and right), we prescribe the reﬂecting boundary condition as follows:
 
-$$h_{i,0} = h_{i,1}, \(uh\)_{i,0} = -uh_{i,1},$$\
-$$h_{i,0} = h_{i,1}, uh_{i,0} = -uh_{i,1}, vh_{i,0} = vh_{i,1}$$
-
-$$h_{i,N_x+1} = h_{i,N_x},\qquad (uh)_{i,N_x+1} = -(uh)_{i,N_x},\qquad (vh)_{i,N_x+1} = (vh)_{i,N_x},$$
+$$h_{i,0} = h_{i,1},\qquad uh_{i,0} = -uh_{i,1},\qquad vh_{i,0} = vh_{i,1}$$\
+$$h_{i,N_x+1} = h_{i,N_x},\qquad uh_{i,N_x+1} = -uh_{i,N_x},\qquad vh_{i,N_x+1} = vh_{i,N_x}$$
 
 The vertical boundary conditions are:
-$$h_{0,j} = h_{1,j},\qquad (uh)_{0,j} = (uh)_{1,j},\qquad (vh)_{0,j} = -(vh)_{1,j},$$
-$$h_{N_x+1,j} = h_{N_x,j},\qquad (uh)_{N_x+1,j} = (uh)_{N_x,j},\qquad (vh)_{N_x+1,j} = -(vh)_{N_x,j}.$$
+$$h_{0,j} = h_{1,j},\qquad uh_{0,j} = uh_{1,j},\qquad vh_{0,j} = -vh_{1,j},$$
+$$h_{N_x+1,j} = h_{N_x,j},\qquad uh_{N_x+1,j} = uh_{N_x,j},\qquad vh_{N_x+1,j} = -vh_{N_x,j}.$$
 
 This way, the momentum is always reﬂected back into the domain, and the wave “bounces oﬀ” the walls of our “square bathtub” domain.
 

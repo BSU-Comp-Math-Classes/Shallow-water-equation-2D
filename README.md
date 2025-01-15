@@ -41,6 +41,15 @@ $$h_{i,j}^{n+1} = \frac14 \left( h_{i+1,j}^{n} + h_{i-1,j}^{n} + h_{i,j+1}^{n} +
 $$uh_{i,j}^{n+1} = \frac14 \left( uh_{i+1,j}^{n} + uh_{i-1,j}^{n} + uh_{i,j+1}^{n} + uh_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{uh,\ i,j+1}^{n} - F_{uh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{uh,\ i+1,j}^{n} - G_{uh,\ i-1,j}^{n} \right) $$\
 $$vh_{i,j}^{n+1} = \frac14 \left( vh_{i+1,j}^{n} + vh_{i-1,j}^{n} + vh_{i,j+1}^{n} + vh_{i,j-1}^{n}\right) + \frac{\Delta t}{2\Delta x} \left(F_{vh,\ i,j+1}^{n} - F_{vh,\ i,j-1}^{n} \right) + \frac{\Delta t}{2\Delta y} \left(G_{vh,\ i+1,j}^{n} - G_{vh,\ i-1,j}^{n} \right) $$
 
-The $^n$ superscript indicates the current value of the variable (at time $t_n$), and $^{n+1}$ indicates the next time-level value we are trying to predict. 
+The $^n$ superscript indicates the current value of the variable (at time $t_n$), and $^{n+1}$ indicates the next time-level value we are trying to predict. $\Delta t$ is the length of the time-step (the difference between $t^{n+1}$ and $t^n$, and $\Delta x$ and $\Delta y$ are the x and y dimensions of each element. 
+
+## Running the code
+The code for the above problem is implemented in the swe_2d.c ﬁle, and works only for one processor and can be run (after it is compiled with the attached Makeﬁle) using the following command:
+`swe_2d 1000 0.0008 10 1.5`
+where the argument list is $N_x = 1000$ elements (we assume $N_x = N_y$, so we get a total of N_x^2 elements, in this case 1,000,000), $\Delta t = 0.0008$s time step size (which needs to correspond to element size, i.e. if we have 2x more elements, we need 2x smaller $\Delta t$), $L_x = 10$ m domain length (we assume $L_x = L_y$ for a square bathtub), and $t_{final} = 1.5$s which is the final simulation time. You can plot the results on your local machine using the attached python script
+`python plot_wave_2d.py <file_to_plot>`
+or provided Matlab script. The data ﬁles will be quite large, so if you want to quickly see how the result should look like, you can decrease the resolution to $N_x = 400$. 
+
+
 
 

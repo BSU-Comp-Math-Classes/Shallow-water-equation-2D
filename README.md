@@ -29,7 +29,7 @@ $$h_{i,0} = h_{i,1},\qquad uh_{i,0} = -uh_{i,1},\qquad vh_{i,0} = vh_{i,1}$$\
 $$h_{i,N_x+1} = h_{i,N_x},\qquad uh_{i,N_x+1} = -uh_{i,N_x},\qquad vh_{i,N_x+1} = vh_{i,N_x}$$
 
 The vertical boundary conditions are:
-$$h_{0,j} = h_{1,j},\qquad uh_{0,j} = uh_{1,j},\qquad vh_{0,j} = -vh_{1,j},$$
+$$h_{0,j} = h_{1,j},\qquad uh_{0,j} = uh_{1,j},\qquad vh_{0,j} = -vh_{1,j},$$\
 $$h_{N_x+1,j} = h_{N_x,j},\qquad uh_{N_x+1,j} = uh_{N_x,j},\qquad vh_{N_x+1,j} = -vh_{N_x,j}.$$
 
 This way, the momentum is always reﬂected back into the domain, and the wave “bounces oﬀ” the walls of our “square bathtub” domain.

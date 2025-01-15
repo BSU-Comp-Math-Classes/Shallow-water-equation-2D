@@ -9,4 +9,15 @@ $$\frac{\partial (uh)}{\partial t} + \frac{\partial F_{uh}}{\partial x} + \frac{
 $$\frac{\partial (vh)}{\partial t} + \frac{\partial F_{vh}}{\partial x} + \frac{\partial G_{vh}}{\partial y} = 0$$
 
 where *h* is the water height, *u* is the velocity in the x direction, *v* is the velocity in the y direction. Variables *uh* and *vh* correspond to momentum in the x and y directions and are used as prognostic variables instead of *u* and *v*, which are computed from *h*, *uh*, and *vh*. *F* and *G* are the ﬂuxes deﬁned as:
-$F_{h} = uh$, $G_h = vh$ 
+$$F_{h} = uh$$, 
+$$G_h = vh$$,
+$$F_{uh} = \frac{(uh)^2}{h} + \frac12 gh^2$$,
+$$G_{uh} = \frac{(uh)\cdot(vh)}{h}$$,
+$$F_{vh} = \frac{(uh)\cdot(vh)}{h}$$,
+$$G_{vh} = \frac{(vh)^2}{h} + \frac12 gh^2$$.
+The gravitational acceleration is $g = 9.81\ m^2/s$.
+We want to solve 2D shallow water equations in a rectangular domain of size $L_x \times L_y$ , and for simplicity, we assume the domain is square. At the edges of the domain, we prescribe reﬂecting boundary conditions, described further in the numerics part.
+
+## Numerical discretization with finite volume scheme
+
+

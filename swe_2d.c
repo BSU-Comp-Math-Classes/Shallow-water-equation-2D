@@ -99,18 +99,18 @@ int main ( int argc, char *argv[] )
   float *y;
   float x_length, time;
 
-  printf ( "\n" );
-  printf ( "SHALLOW_WATER_2D\n" );
-  printf ( "\n" );
+  //printf ( "\n" );
+  //printf ( "SHALLOW_WATER_2D\n" );
+  //printf ( "\n" );
 
   //get command line arguments
   getArgs(&nx, &dt, &x_length, &t_final, argc, argv);
   
  
-  printf ( "  NX = %d\n", nx );
-  printf ( "  DT = %g\n", dt );
-  printf ( "  X_LENGTH = %g\n", x_length );
-  printf ( "  T_FINAL = %g\n", t_final );
+  //printf ( "  NX = %d\n", nx );
+  //printf ( "  DT = %g\n", dt );
+  //printf ( "  X_LENGTH = %g\n", x_length );
+  //printf ( "  T_FINAL = %g\n", t_final );
   
   ny=nx; // we assume this, does not have to be this way
 
@@ -142,10 +142,10 @@ int main ( int argc, char *argv[] )
 
     // **** INITIAL CONDITIONS ****
   //Apply the initial conditions.
-  printf("Before initial conditions\n");
+  //printf("Before initial conditions\n");
   initial_conditions ( nx, ny, dx, dy, x_length,  x, y, h, uh, vh);
 
-  printf("Before write results\n");
+  //printf("Before write results\n");
   //Write initial condition to a file
   write_results("sw2d_init.dat",nx,ny,x,y,h,uh,vh);
 
@@ -153,13 +153,18 @@ int main ( int argc, char *argv[] )
   float lambda_x = 0.5*dt/dx;
   float lambda_y = 0.5*dt/dy;
 
+
   time=0;
+  int k=0; //time-step counter
+  //start timer
+  clock_t time_start = clock();
+
   while (time<t_final) //time loop begins
     {
       //  Take a time step
       time=time+dt;
-
-      printf("time = %f\n",time);
+      k++;
+      //printf("time = %f\n",time);
       // **** COMPUTE FLUXES ****
       //Compute fluxes (including ghosts) 
       for ( i = 0; i < ny+2; i++ )
@@ -249,6 +254,11 @@ int main ( int argc, char *argv[] )
 
     } //end time loop
 
+clock_t time_end = clock();
+double time_elapsed = (double)(time_end - time_start) / CLOCKS_PER_SEC;
+  
+ printf("Problem size: %d, time steps taken: %d,  elapsed time: %f s\n", nx,k,time_elapsed);
+  
   // **** POSTPROCESSING ****
   // Write data to file
   write_results("sw2d_final.dat",nx,ny,x,y,h,uh,vh);
@@ -269,10 +279,10 @@ int main ( int argc, char *argv[] )
 
  //Terminate.
 
-  printf ( "\n" );
-  printf ( "SHALLOW_WATER_2D:\n" );
-  printf ( "  Normal end of execution.\n" );
-  printf ( "\n" );
+  //printf ( "\n" );
+  //printf ( "SHALLOW_WATER_2D:\n" );
+  //printf ( "  Normal end of execution.\n" );
+  //printf ( "\n" );
 
   return 0;
 }

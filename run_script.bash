@@ -11,5 +11,5 @@
 #module load gcc mpich slurm
 #make swe_2d
 
-./swe_2d 1600 0.0005 10 1.5
+./swe_2d 400 0.002 10 1.5
 

@@ -91,6 +91,9 @@ int main ( int argc, char *argv[] )
 
   // calculate q = sqrt(nproc) - watch for this type conversion
   int q = (int) sqrt(nproc);
+
+  int irank_x = irank%q;
+  int irank_y = irank/q; //check whether this is indeed an interger div
   
   float dx;
   float dy;
@@ -134,6 +137,8 @@ int main ( int argc, char *argv[] )
   // MPI - make sure each rank only allocates it's own chunk of memory
   int nx_loc = nx/q;
   int ny_loc = ny/q;
+  int nvariable = 9;
+  int data_size = nvariables*nx_loc;
 
   //Allocate space (nx+2)((nx+2) long, to accound for ghosts
   //height array  
@@ -205,6 +210,25 @@ int main ( int argc, char *argv[] )
 	}
       tEnd = clock();
       tFlux = tFlux + (double)(tEnd - tStart)/ CLOCKS_PER_SEC;
+
+
+
+      //packing for 101 communication
+
+      //Communicate to the right
+      if(irank_x>0 && irank_x<q-1){
+	MPI_Sendrecv(ghost_right,data_size,MPI_FLOAT,irank+1,101,ghost_left,data_size,MPI_FLOAT,irank-1,101,MPI_COMM_WORLD,&status);
+      }
+      else if(irank_x==0 && nproc>1){
+	MPI_Send(ghost_right,data_size,MPI_DOUBLE,irank+1,101,MPI_COMM_WORLD);
+      }
+      else if(irank_x==q-1 && nproc>1){
+	MPI_Recv(ghost_left,data_size,MPI_DOUBLE,irank-1,101, MPI_COMM_WORLD, &status);
+      }
+
+      //unpacking for 101 communcation
+
+
 
       // **** COMPUTE VARIABLES ****
       //Compute updated variables

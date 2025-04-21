@@ -1,48 +1,23 @@
-# include "common.h"
-# include <cuda_runtime.h>
 # include <stdlib.h>
 # include <stdio.h>
 # include <math.h>
 # include <string.h>
 # include <time.h>
+# include <mpi.h>
 
 #define ID_2D(i,j,nx) ((i)*(nx+2)+(j))
 
 int main ( int argc, char *argv[] );
 void initial_conditions ( int nx, int ny, float dx, float dy,  float x_length, float x[],float y[], float h[], float uh[] ,float vh[]);
-
+void initial_conditions_rank ( int nx_loc, int ny_loc, float dx, float dy,  float x_length, float x[],float y[], float h[], float uh[] ,float vh[], int irank, int q);
+  
 //utilities
 void getArgs(int *nx, float *dt, float *x_length, float *t_final, int argc, char *argv[]);
 
 void write_results ( char *output_filename, int nx, int ny, float x[], float y[], float h[], float uh[], float vh[]);
 
-
-__global__ void computeFluxesGPU(float *h,  float *uh,  float *vh, 
-				 float *fh, float *fuh, float *fvh,
-				 float *gh, float *guh, float *gvh,
-				 int nx, int ny)
-{
-    unsigned int i = threadIdx.x + blockIdx.x * blockDim.x;
-    unsigned int j = threadIdx.y + blockIdx.y * blockDim.y;
-    unsigned int id;
-
-    float g=9.81;
-
-      // **** COMPUTE FLUXES ****
-      //Compute fluxes (including ghosts) 
-
-    if (i < nx+2 && j < ny+2){
-	  id=ID_2D(i,j,nx);
-
-	  fh[id] = uh[id]; //flux for the height equation: u*h
-	  fuh[id] = uh[id]*uh[id]/h[id] + 0.5*g*h[id]*h[id]; //flux for the momentum equation: u^2*h + 0.5*g*h^2
-	  fvh[id] = uh[id]*vh[id]/h[id]; //flux for the momentum equation: u*v**h 
-	  gh[id] = vh[id]; //flux for the height equation: v*h
-	  guh[id] = uh[id]*vh[id]/h[id]; //flux for the momentum equation: u*v**h 
-	  gvh[id] = vh[id]*vh[id]/h[id] + 0.5*g*h[id]*h[id]; //flux for the momentum equation: v^2*h + 0.5*g*h^2
-	}
-
-}
+// write results to file
+void write_results_mpi ( char *output_filename, int N, int N_loc, float dx, float u[], int irank, int nproc);
 
 
 /******************************************************************************/
@@ -106,24 +81,35 @@ int main ( int argc, char *argv[] )
 */
 
 {
+
+  int irank, nproc;
+  
+  //Initialize MPI
+  MPI_Init(&argc,&argv); 
+  MPI_Comm_rank(MPI_COMM_WORLD,&irank);
+  MPI_Comm_size(MPI_COMM_WORLD,&nproc);
+
+  // calculate q = sqrt(nproc) - watch for this type conversion
+  int q = (int) sqrt(nproc);
+  
   float dx;
   float dy;
   float dt;
   float g = 9.81; //[m^2/s] gravitational constant
   float *h;
-  float *fh, *h_fh;
-  float *gh, *h_gh;
+  float *fh;
+  float *gh;
   float *hm;
   int i,j, id, id_left, id_right, id_bottom, id_top;
   int nx, ny;
   float t_final;
   float *uh;
-  float *fuh, *h_fuh;
-  float *guh, *h_guh;
+  float *fuh;
+  float *guh;
   float *uhm;
   float *vh;
-  float *fvh, *h_fvh;
-  float *gvh, *h_gvh;
+  float *fvh;
+  float *gvh;
   float *vhm;
   float *x;
   float *y;
@@ -145,50 +131,29 @@ int main ( int argc, char *argv[] )
   ny=nx; // we assume this, does not have to be this way
 
   // **** ALLOCATE MEMORY ****
-  
+  // MPI - make sure each rank only allocates it's own chunk of memory
+  int nx_loc = nx/q;
+  int ny_loc = ny/q;
+
   //Allocate space (nx+2)((nx+2) long, to accound for ghosts
-  //height array
-  h  = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  hm = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  fh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  gh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  h_fh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  h_gh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-
+  //height array  
+  h  = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  hm = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  fh = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  gh = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
   //x momentum array
-  uh  = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  uhm = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  fuh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  guh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-
-  h_fuh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  h_guh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
+  uh  = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  uhm = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  fuh = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  guh = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
   //y momentum array
-  vh  = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  vhm = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  fvh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  gvh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-
-  h_fvh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  h_gvh = ( float * ) malloc ( (nx+2)*(ny+2) * sizeof ( float ) );
-  // location arrays
-  x = ( float * ) malloc ( nx * sizeof ( float ) );
-  y = ( float * ) malloc ( ny * sizeof ( float ) );
-
-  //Allocate memory on the device
-  float *d_h, *d_uh, *d_vh;
-  float *d_fh, *d_fuh, *d_fvh;
-  float *d_gh, *d_guh, *d_gvh;
-
-  CHECK(cudaMalloc((void **)&d_h, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_uh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_vh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_fh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_fuh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_fvh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_gh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_guh, (nx+2)*(ny+2) * sizeof ( float )));
-  CHECK(cudaMalloc((void **)&d_gvh, (nx+2)*(ny+2) * sizeof ( float )));
+  vh  = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  vhm = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  fvh = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  gvh = ( float * ) malloc ( (nx_loc+2)*(ny_loc+2) * sizeof ( float ) );
+  // location arrays - adjust for MPI  
+  x = ( float * ) malloc ( nx_loc * sizeof ( float ) );
+  y = ( float * ) malloc ( ny_loc * sizeof ( float ) );
 
   //Define the locations of the nodes and time steps and the spacing.
   dx = x_length / ( float ) ( nx );
@@ -197,12 +162,13 @@ int main ( int argc, char *argv[] )
     // **** INITIAL CONDITIONS ****
   //Apply the initial conditions.
   //printf("Before initial conditions\n");
-  initial_conditions ( nx, ny, dx, dy, x_length,  x, y, h, uh, vh);
+  //initial_conditions ( nx, ny, dx, dy, x_length,  x, y, h, uh, vh);
+  initial_conditions_rank ( nx_loc, ny_loc, dx, dy, x_length,  x, y, h, uh, vh, irank, q);
 
   //printf("Before write results\n");
   //Write initial condition to a file
-  write_results("swe2d_cuda_init.dat",nx,ny,x,y,h,uh,vh);
-
+  write_results_mpi ( "sw2d_init_mpi.dat", nx, nx_loc, dx, h, irank, nproc);
+    //write_results("sw2d_init.dat",nx,ny,x,y,h,uh,vh);
 
   // **** TIME LOOP ****
   float lambda_x = 0.5*dt/dx;
@@ -212,14 +178,10 @@ int main ( int argc, char *argv[] )
   time=0;
   int k=0; //time-step counter
   //start timer
-  double time_start = seconds();
-
-
-  double tStart;
-  double tMemcpy = 0.0;  
-  double tMemcpyBack = 0.0;  
-  double tFluxKernel = 0.0;
-
+  clock_t time_start = clock();
+  double tFlux = 0.0;
+  clock_t tStart;
+  clock_t tEnd;
   while (time<t_final) //time loop begins
     {
       //  Take a time step
@@ -228,7 +190,9 @@ int main ( int argc, char *argv[] )
       //printf("time = %f\n",time);
       // **** COMPUTE FLUXES ****
       //Compute fluxes (including ghosts) 
-      /*      for ( i = 0; i < ny+2; i++ )
+      
+      tStart = clock();
+      for ( i = 0; i < ny+2; i++ )
 	for ( j = 0; j < nx+2; j++){
 	  id=ID_2D(i,j,nx);
 
@@ -239,39 +203,8 @@ int main ( int argc, char *argv[] )
 	  guh[id] = uh[id]*vh[id]/h[id]; //flux for the momentum equation: u*v**h 
 	  gvh[id] = vh[id]*vh[id]/h[id] + 0.5*g*h[id]*h[id]; //flux for the momentum equation: v^2*h + 0.5*g*h^2
 	}
-      */
-
-      tStart = seconds();
-      //Move data to the device
-      CHECK(cudaMemcpy(d_h, h, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyHostToDevice));
-      CHECK(cudaMemcpy(d_uh, uh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyHostToDevice));
-      CHECK(cudaMemcpy(d_vh, vh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyHostToDevice));
-      tMemcpy = tMemcpy + seconds() - tStart;
-      
-      tStart = seconds();
-      int dimx = 32;
-      int dimy = 32;
-      dim3 block(dimx, dimy);
-      dim3 grid((nx + block.x - 1) / block.x, (ny + block.y - 1) / block.y);
-
-      computeFluxesGPU<<<grid, block>>>(d_h, d_uh, d_vh,
-					d_fh, d_fuh, d_fvh,
-					d_gh, d_guh, d_gvh,
-					nx, ny);
-      CHECK(cudaGetLastError());
-      tFluxKernel = tFluxKernel + seconds() - tStart;
-
-      tStart = seconds();
-      //Move fluxes back - for now
-      CHECK(cudaMemcpy(fh, d_fh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyDeviceToHost));
-      CHECK(cudaMemcpy(fuh, d_fuh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyDeviceToHost));
-      CHECK(cudaMemcpy(fvh, d_fvh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyDeviceToHost));
-      CHECK(cudaMemcpy(gh, d_gh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyDeviceToHost));
-      CHECK(cudaMemcpy(guh, d_guh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyDeviceToHost));
-      CHECK(cudaMemcpy(gvh, d_gvh, (nx+2)*(ny+2) * sizeof ( float ), cudaMemcpyDeviceToHost));
-
-      tMemcpyBack = tMemcpyBack + seconds() - tStart;
-
+      tEnd = clock();
+      tFlux = tFlux + (double)(tEnd - tStart)/ CLOCKS_PER_SEC;
 
       // **** COMPUTE VARIABLES ****
       //Compute updated variables
@@ -348,51 +281,39 @@ int main ( int argc, char *argv[] )
 
     } //end time loop
 
-
-  double time_elapsed = seconds() - time_start;
+  clock_t time_end = clock();
+  double time_elapsed = (double)(time_end - time_start)/ CLOCKS_PER_SEC;
   
- printf("Problem size: %d, time steps taken: %d,  elapsed time: %f s\n", nx,k,time_elapsed);
- printf("CUDA timers: \n");
- printf("cudaMemcpy to device: %f s\n",tMemcpy); 
- printf("cudaMemcpy to host:   %f s\n",tMemcpyBack);
- printf("Flux kernel         : %f s\n",tFluxKernel);
+  printf("Problem size: %d, time steps taken: %d,  elapsed time: %f s\n", nx,k,time_elapsed);
+  printf("Flux computation: %f s\n",tFlux);
 
   // **** POSTPROCESSING ****
   // Write data to file
-  write_results("sw2d_cuda_final.dat",nx,ny,x,y,h,uh,vh);
+  //write_results("sw2d_final.dat",nx,ny,x,y,h,uh,vh);
+  write_results_mpi ( "sw2d_final_mpi.dat", nx, nx_loc, dx, h, irank, nproc);
 
-  CHECK(cudaFree(d_h));
-  CHECK(cudaFree(d_uh));
-  CHECK(cudaFree(d_vh));
-  CHECK(cudaFree(d_fh));
-  CHECK(cudaFree(d_fuh));
-  CHECK(cudaFree(d_fvh));
-  CHECK(cudaFree(d_gh));
-  CHECK(cudaFree(d_guh));
-  CHECK(cudaFree(d_gvh));
-
-
-  //Free memory.
+  //Free memory.  
+  
   free ( h );
-  free ( uh );
-  free ( vh ); 
+  free ( hm );
   free ( fh );
-  free ( fuh );
-  free ( fvh ); 
   free ( gh );
-  free ( guh );
-  free ( gvh ); 
 
-  free ( h_fh );
-  free ( h_fuh );
-  free ( h_fvh ); 
-  free ( h_gh );
-  free ( h_guh );
-  free ( h_gvh ); 
+  free ( uh );
+  free ( uhm );
+  free ( fuh );
+  free ( guh );
+
+  free ( vh ); 
+  free ( vhm ); 
+  free ( fvh ); 
+  free ( gvh ); 
 
   free ( x );
   free ( y );
 
+  //Finalize MPI
+  MPI_Finalize();
  //Terminate.
 
   //printf ( "\n" );
@@ -483,6 +404,100 @@ void initial_conditions ( int nx, int ny, float dx, float dy,  float x_length, f
 }
 /******************************************************************************/
 
+void initial_conditions_rank ( int nx_loc, int ny_loc, float dx, float dy,  float x_length, float x[],float y[], float h[], float uh[] ,float vh[], int irank, int q){
+  int i,j, id, id1;
+
+
+  int irank_x = irank%q;
+  int irank_y = irank/q; //check whether this is indeed an interger division
+  
+  for ( i = 1; i < nx_loc+1; i++ )
+    {
+      x[i-1] = -x_length/2+ irank_x*(x_length/q)  +dx/2+(i-1)*dx;
+      y[i-1] = -x_length/2+ irank_y*(x_length/q)  +dy/2+(i-1)*dy;
+    }
+
+  for ( i = 1; i < nx_loc+1; i++ )
+    for( j = 1; j < ny_loc+1; j++)
+      {
+	float xx = x[j-1];
+	float yy = y[i-1];
+	id=ID_2D(i,j,nx_loc);
+	h[id] = 1.0 + 0.4*exp ( -5 * ( xx*xx + yy*yy) );
+      }
+
+  printf("rank = %d, (%d,%d), grid = (%f, %f) x (%f, %f)\n",irank,irank_x,irank_y,x[0],x[nx_loc-1],y[0],y[ny_loc-1]);
+  
+  for ( i = 1; i < nx_loc+1; i++ )
+    for( j = 1; j < ny_loc+1; j++)
+      {
+	id=ID_2D(i,j,nx_loc);
+	uh[id] = 0.0;
+	vh[id] = 0.0;
+      }
+
+  
+  //set boundaries
+  //left
+  if(irank_x==0){
+    i=0;
+    for( j = 1; j < nx_loc+1; j++)
+      {
+	id=ID_2D(i,j,nx_loc);
+	id1=ID_2D(i+1,j,nx_loc);
+	
+	h[id] = h[id1];
+	uh[id] = 0.0;
+	vh[id] = 0.0;
+      }
+  }
+
+  //right
+  if(irank_x==q-1){
+    i=nx_loc+1;
+    for( j = 1; j < nx_loc+1; j++)
+      {
+	id=ID_2D(i,j,nx_loc);
+	id1=ID_2D(i-1,j,nx_loc);
+	
+	h[id] = h[id1];
+	uh[id] = 0.0;
+	vh[id] = 0.0;
+      }
+  }
+
+  //bottom
+  if(irank_y==0){
+    j=0;
+    for( i = 1; i < ny_loc+1; i++)
+      {
+	id=ID_2D(i,j,nx_loc);
+	id1=ID_2D(i,j+1,nx_loc);
+	
+	h[id] = h[id1];
+	uh[id] = 0.0;
+	vh[id] = 0.0;
+      }
+  }
+
+  //top
+  if(irank_y == q-1){
+    j=nx_loc+1;
+    for( i = 1; i < ny_loc+1; i++)
+      {
+	id=ID_2D(i,j,nx_loc);
+	id1=ID_2D(i,j-1,nx_loc);
+
+	h[id] = h[id1];
+	uh[id] = 0.0;
+	vh[id] = 0.0;
+      }
+  }
+
+  return;
+}
+/******************************************************************************/
+
 
 void write_results ( char *output_filename, int nx, int ny, float x[], float y[], float h[], float uh[], float vh[])
 /******************************************************************************/
@@ -511,6 +526,87 @@ void write_results ( char *output_filename, int nx, int ny, float x[], float y[]
   //Close the file.
   fclose ( output );
   
+  return;
+}
+/******************************************************************************/
+
+void write_results_mpi ( char *output_filename, int N, int N_loc, float dx, float u[], int irank, int nproc)
+/******************************************************************************/
+
+{
+  int i,j, id;
+  FILE *output;
+
+  float x,y;
+   
+  float *u_local       = malloc((N_loc)*(N_loc)*sizeof(float));
+  float *u_global      = malloc((N)*(N)*sizeof(float));
+  float *u_write       = malloc((N)*(N)*sizeof(float));
+  
+
+  //pack the data for gather (to avoid sending ghosts)
+  int id_loc = 0;
+  for(j=1;j<N_loc+1;j++){
+    for(i=1;i<N_loc+1;i++){
+      id = ID_2D(i,j,N_loc);
+      u_local[id_loc] = u[id];
+      id_loc++;
+    }
+  }
+
+
+  //gather data on rank 0
+  MPI_Gather(u_local,id_loc,MPI_FLOAT,u_global,id_loc,MPI_FLOAT,0,MPI_COMM_WORLD);
+
+
+
+  //unpack data so that it is in nice array format
+  int id_write, id_global;
+  int irank_x, irank_y;
+  int q = sqrt(nproc);
+
+  if(irank==0){
+  
+    for(int p=0; p<nproc;p++){
+      irank_x = p%q;
+      irank_y = p/q;
+      for(j=0;j<N_loc;j++){
+	for(i=0;i<N_loc;i++){
+	  id_global = p*N_loc*N_loc + j*N_loc + i;
+	  id_write  = irank_x*N_loc*N_loc*q + j*N_loc*q + irank_y*N_loc + i;
+
+	  u_write[id_write] = u_global[id_global];
+	}
+      }
+    }
+
+    //Open the file.
+    output = fopen ( output_filename, "wt" );
+    
+    if ( !output ){
+      fprintf ( stderr, "\n" );
+      fprintf ( stderr, "WRITE_RESULTS - Fatal error!\n" );
+      fprintf ( stderr, "  Could not open the output file.\n" );
+      exit ( 1 );
+    }
+    
+    //Write the data.
+    for ( i = 0; i < N; i++ ) 
+      for ( j = 0; j < N; j++ ){
+        id=j*N+i;
+	x = i*dx; //I am a bit lazy here with not gathering x and y
+	y = j*dx;
+	
+	fprintf ( output, "  %24.16g\t%24.16g\t%24.16g\t%24.16g\t%24.16g\n", x, y,u_write[id], 0.0, 0.0); //added extra zeros for backward-compatibility with plotting routines
+      }
+
+    //Close the file.
+    fclose ( output );
+
+  }
+  free(u_global); 
+  free(u_write);
+  free(u_local);
   return;
 }
 /******************************************************************************/

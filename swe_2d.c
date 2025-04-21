@@ -158,7 +158,9 @@ int main ( int argc, char *argv[] )
   int k=0; //time-step counter
   //start timer
   clock_t time_start = clock();
-
+  double tFlux = 0.0;
+  clock_t tStart;
+  clock_t tEnd;
   while (time<t_final) //time loop begins
     {
       //  Take a time step
@@ -167,6 +169,8 @@ int main ( int argc, char *argv[] )
       //printf("time = %f\n",time);
       // **** COMPUTE FLUXES ****
       //Compute fluxes (including ghosts) 
+      
+      tStart = clock();
       for ( i = 0; i < ny+2; i++ )
 	for ( j = 0; j < nx+2; j++){
 	  id=ID_2D(i,j,nx);
@@ -178,6 +182,8 @@ int main ( int argc, char *argv[] )
 	  guh[id] = uh[id]*vh[id]/h[id]; //flux for the momentum equation: u*v**h 
 	  gvh[id] = vh[id]*vh[id]/h[id] + 0.5*g*h[id]*h[id]; //flux for the momentum equation: v^2*h + 0.5*g*h^2
 	}
+      tEnd = clock();
+      tFlux = tFlux + (double)(tEnd - tStart)/ CLOCKS_PER_SEC;
 
       // **** COMPUTE VARIABLES ****
       //Compute updated variables
@@ -254,11 +260,12 @@ int main ( int argc, char *argv[] )
 
     } //end time loop
 
-clock_t time_end = clock();
-double time_elapsed = (double)(time_end - time_start) / CLOCKS_PER_SEC;
+  clock_t time_end = clock();
+  double time_elapsed = (double)(time_end - time_start)/ CLOCKS_PER_SEC;
   
- printf("Problem size: %d, time steps taken: %d,  elapsed time: %f s\n", nx,k,time_elapsed);
-  
+  printf("Problem size: %d, time steps taken: %d,  elapsed time: %f s\n", nx,k,time_elapsed);
+  printf("Flux computation: %f s\n",tFlux);
+
   // **** POSTPROCESSING ****
   // Write data to file
   write_results("sw2d_final.dat",nx,ny,x,y,h,uh,vh);
